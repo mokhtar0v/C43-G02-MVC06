@@ -31,7 +31,7 @@ namespace Demo.Presentation.Controllers
                 try
                 {
                     int res = _departmentService.CreateDepartment(createDepartmentDTO);
-                    if (res > 0) return View(nameof(Index)); //Back to list
+                    if (res > 0) return RedirectToAction("Index"); //Back to list
                     else
                     {
                         ModelState.AddModelError(string.Empty, "Department Can't be Created");
@@ -83,8 +83,8 @@ namespace Demo.Presentation.Controllers
             {
                 var departmentViewModel = new DepartmentEditViewModel()
                 {
-                    Code = department.Code,
                     Name = department.Name,
+                    Code = department.Code,
                     Description = department.Description,
                     DateOfCreation = department.DateOfCreation,
                 };
@@ -93,32 +93,31 @@ namespace Demo.Presentation.Controllers
         }
 
         [HttpPost]
-        public IActionResult Edit(DepartmentEditViewModel departmentEditViewModel)
-        {
-            if (!ModelState.IsValid) return View(departmentEditViewModel);
+        public IActionResult Edit(int? id,DepartmentEditViewModel departmentViewModel)
+            {
+            if(!id.HasValue) return BadRequest();
+            if (!ModelState.IsValid) return View(departmentViewModel);
             try
             {
-                var updatedDept = new UpdateDepartmentDTO()
-                {
-                    Code = departmentEditViewModel.Code,
-                    Name = departmentEditViewModel.Name,
-                    Description = departmentEditViewModel.Description,
-                    DateOfCreation=departmentEditViewModel.DateOfCreation
-                };
-                var res = _departmentService.UpdateDepartment(updatedDept);
 
+                var updatedDepartment = new UpdateDepartmentDTO()
+                {
+                    ID = id.Value,
+                    Name = departmentViewModel.Name,
+                    Code = departmentViewModel.Code,
+                    Description = departmentViewModel.Description,
+                    DateOfCreation = departmentViewModel.DateOfCreation,
+                };
+                var res = _departmentService.UpdateDepartment(updatedDepartment);
                 if (res > 0) return RedirectToAction(nameof(Index));
+
                 else
                 {
-                    ModelState.AddModelError(string.Empty, "Department Can't be Updated");
-                    //return View(departmentEditViewModel);
+                    ModelState.AddModelError(string.Empty, "Student Can't be Updated");
                 }
             }
             catch (Exception ex)
             {
-                //log exception
-                //1. developement=>console
-                //2. deployment=>file
 
                 if (_environment.IsDevelopment())
                 {
@@ -130,8 +129,50 @@ namespace Demo.Presentation.Controllers
                 }
 
             }
-            return View(departmentEditViewModel);
+            return View(departmentViewModel);
 
+        }
+        #endregion
+
+        #region Delete
+        [HttpGet]
+        public IActionResult Delete(int? id)
+        {
+            if (!id.HasValue) return BadRequest();
+            var department = _departmentService.GetDepartmentByID(id.Value);
+            if (department == null) return NotFound();
+            return View(department);
+        }
+
+        [HttpPost]
+        public IActionResult Delete(int id)
+        {
+            if (id == 0) return BadRequest();
+            try
+            {
+                var deleted = _departmentService.DeleteDepartment(id);
+                if (deleted)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Department Can't be Deleted");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_environment.IsDevelopment())
+                {
+                    ModelState.AddModelError(string.Empty, ex.Message);
+                }
+                else
+                {
+                    _logger.LogError(ex.Message);
+                }
+            }
+
+            return RedirectToAction(nameof(Delete), new { id = id });
         }
         #endregion
     }
